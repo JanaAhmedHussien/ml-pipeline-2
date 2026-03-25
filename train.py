@@ -9,15 +9,8 @@ from sklearn.metrics import accuracy_score
 import dagshub
 
 
-dagshub_token = os.environ.get("DAGSHUB_TOKEN")
-if dagshub_token:
-    dagshub.auth.add_token_for_host("dagshub.com", dagshub_token)
 
-# Now initialize DagsHub
-dagshub.init(repo_owner='JanaAhmedHussien', repo_name='ml-pipeline-2', mlflow=True)
-
-
-mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+mlflow.set_tracking_uri("https://dagshub.com/JanaAhmedHussien/ml-pipeline-2.mlflow")
 
 
 with mlflow.start_run() as run:
