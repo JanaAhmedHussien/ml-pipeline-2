@@ -1,79 +1,72 @@
-name: Model CI-CD Pipeline
+name: ML Pipeline
 
 on: [push]
 
 jobs:
+
   validate:
-    name: Validation Job
     runs-on: ubuntu-latest
+
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          pip install mlflow scikit-learn dvc pandas
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
 
-      - name: DVC Pull Data
-        env:
-          # Use your DagsHub credentials for DVC access
-          DVC_REMOTE_USER: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
-          DVC_REMOTE_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-        run: |
-          # We use --local to avoid committing credentials to git
-          dvc remote modify origin --local auth basic
-          dvc remote modify origin --local user $DVC_REMOTE_USER
-          dvc remote modify origin --local password $DVC_REMOTE_PASSWORD
-          dvc pull || echo "DVC Pull failed or no data to pull, continuing..."
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install dvc
 
-      - name: Train and Observe
-        env:
-          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-        run: python train.py
+    - name: Pull data with DVC
+      run: |
+        dvc pull || echo "No remote, using local data"
 
-      - name: Persist Model Info
-        uses: actions/upload-artifact@v4
-        with:
-          name: model-run-info
-          path: model_info.txt
+    - name: Train model
+      run: python train.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: model_info
+        path: model_info.txt
+
 
   deploy:
-    name: Deployment Job
     needs: validate
     runs-on: ubuntu-latest
+
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: model-run-info
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
 
-      - name: Run Threshold Logic
-        env:
-          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
-        run: |
-          pip install mlflow
-          python check_threshold.py
+    - name: Install dependencies
+      run: pip install mlflow
 
-      - name: Mock Build (Containerize)
-        if: success()
-        run: |
-          export RUN_ID=$(cat model_info.txt)
-          echo "Building Docker image for Run ID: $RUN_ID"
-          docker build --build-arg RUN_ID=$RUN_ID -t jana-model:latest .
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: model_info
+
+    - name: Check accuracy threshold
+      run: python check_threshold.py
+
+    - name: Mock Docker Build
+      run: |
+        echo "Building Docker image for Run ID: $(cat model_info.txt)"
