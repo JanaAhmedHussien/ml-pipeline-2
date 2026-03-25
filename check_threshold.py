@@ -1,27 +1,29 @@
 import mlflow
+import os
 import sys
 
-THRESHOLD = 0.85
-mlflow.set_tracking_uri("file:./mlruns")
-# Read run ID
-with open("model_info.txt", "r") as f:
-    run_id = f.read().strip()
+mlflow.set_tracking_uri(os.environ.get('MLFLOW_TRACKING_URI'))
 
-client = mlflow.tracking.MlflowClient()
+def verify_performance():
+    if not os.path.exists("model_info.txt"):
+        print("Error: model_info.txt not found!")
+        sys.exit(1)
 
-run = client.get_run(run_id)
+    with open("model_info.txt", "r") as f:
+        run_id = f.read().strip()
+    
+    # Fetch data from MLflow
+    run = mlflow.get_run(run_id)
+    accuracy = run.data.metrics.get("accuracy", 0)
+    
+    print(f"Validating Run {run_id} | Accuracy: {accuracy:.4f}")
+    
+    # TASK: Fail pipeline if accuracy < 0.85
+    if accuracy < 0.85:
+        print("RESULT: REJECTED (Accuracy below 0.85)")
+        sys.exit(1)
+    else:
+        print("RESULT: PASSED (Proceeding to Deployment)")
 
-accuracy = run.data.metrics.get("accuracy")
-
-print(f"Run ID: {run_id}")
-print(f"Accuracy: {accuracy}")
-
-if accuracy is None:
-    print("No accuracy logged. Failing pipeline.")
-    sys.exit(1)
-
-if accuracy < THRESHOLD:
-    print(f"Accuracy {accuracy} is below threshold {THRESHOLD}. Failing.")
-    sys.exit(1)
-
-print("Model passed validation!")
+if __name__ == "__main__":
+    verify_performance()

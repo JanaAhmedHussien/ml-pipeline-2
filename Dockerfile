@@ -1,11 +1,12 @@
 FROM python:3.12-slim
 
+# TASK: Accept RUN_ID as ARG
 ARG RUN_ID
+ENV RUN_ID=${RUN_ID}
 
 WORKDIR /app
 
-COPY . .
+# TASK: Include command to "download" the model
+RUN echo "Model successfully downloaded from MLflow Run: ${RUN_ID}" > deployment_status.txt
 
-RUN pip install mlflow scikit-learn
-
-CMD echo "Downloading model for Run ID: ${RUN_ID}"
+CMD ["cat", "deployment_status.txt"]

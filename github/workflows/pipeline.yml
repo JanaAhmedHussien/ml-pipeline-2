@@ -1,95 +1,79 @@
-name: ML Pipeline
+name: Model CI-CD Pipeline
 
-on:
-  push:
-    branches: [ "main" ]
+on: [push]
 
 jobs:
-
   validate:
+    name: Validation Job
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.12'
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
-          pip install dvc mlflow
+          pip install mlflow scikit-learn dvc pandas
 
-      - name: Pull data with DVC
-        run: dvc pull
+      - name: DVC Pull Data
+        env:
+          # Use your DagsHub credentials for DVC access
+          DVC_REMOTE_USER: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          DVC_REMOTE_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+        run: |
+          # We use --local to avoid committing credentials to git
+          dvc remote modify origin --local auth basic
+          dvc remote modify origin --local user $DVC_REMOTE_USER
+          dvc remote modify origin --local password $DVC_REMOTE_PASSWORD
+          dvc pull || echo "DVC Pull failed or no data to pull, continuing..."
 
-      - name: Train model
+      - name: Train and Observe
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-        run: |
-          python train.py
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+        run: python train.py
 
-      - name: Extract MLflow Run ID
-        run: |
-          echo "Getting latest run ID from MLflow..."
-          python <<EOF
-          import mlflow
-          import os
-
-          client = mlflow.tracking.MlflowClient()
-          experiment = client.get_experiment_by_name("Default")
-
-          runs = client.search_runs(
-              experiment_ids=[experiment.experiment_id],
-              order_by=["attributes.start_time DESC"],
-              max_results=1
-          )
-
-          run_id = runs[0].info.run_id
-
-          with open("model_info.txt", "w") as f:
-              f.write(run_id)
-
-          print("Run ID:", run_id)
-          EOF
-
-      - name: Upload artifact
+      - name: Persist Model Info
         uses: actions/upload-artifact@v4
         with:
-          name: model-info
+          name: model-run-info
           path: model_info.txt
 
-
   deploy:
-    runs-on: ubuntu-latest
+    name: Deployment Job
     needs: validate
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download artifact
+      - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
-          name: model-info
+          name: model-run-info
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: '3.12'
 
-      - name: Install MLflow
-        run: pip install mlflow
-
-      - name: Check accuracy threshold
+      - name: Run Threshold Logic
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
         run: |
+          pip install mlflow
           python check_threshold.py
 
-      - name: Mock Docker build
+      - name: Mock Build (Containerize)
+        if: success()
         run: |
-          echo "Building Docker image for Run ID: $(cat model_info.txt)"
+          export RUN_ID=$(cat model_info.txt)
+          echo "Building Docker image for Run ID: $RUN_ID"
+          docker build --build-arg RUN_ID=$RUN_ID -t jana-model:latest .

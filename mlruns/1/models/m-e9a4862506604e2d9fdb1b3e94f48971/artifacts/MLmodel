@@ -1,4 +1,4 @@
-artifact_path: file:///C:/Users/Janaa/Desktop/Assignment5_MLops/ml-pipeline/mlruns/0/models/m-778db851c0e140ebb9f613d83fc1b512/artifacts
+artifact_path: file:///C:/Users/Janaa/Desktop/Assignment5_MLops/ml-pipeline/mlruns/1/models/m-e9a4862506604e2d9fdb1b3e94f48971/artifacts
 flavors:
   python_function:
     env:
@@ -15,9 +15,9 @@ flavors:
     sklearn_version: 1.8.0
     skops_trusted_types: null
 mlflow_version: 3.10.1
-model_id: m-778db851c0e140ebb9f613d83fc1b512
-model_size_bytes: 178445
-model_uuid: m-778db851c0e140ebb9f613d83fc1b512
+model_id: m-e9a4862506604e2d9fdb1b3e94f48971
+model_size_bytes: 76590
+model_uuid: m-e9a4862506604e2d9fdb1b3e94f48971
 prompts: null
-run_id: bd8d64db38d24a1ab3e58649089801f5
-utc_time_created: '2026-03-25 03:43:59.073878'
+run_id: 3614c13761514077aeec415a8cb96130
+utc_time_created: '2026-03-25 14:07:35.594505'
