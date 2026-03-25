@@ -11,8 +11,6 @@ import dagshub
 dagshub.init(repo_owner='JanaAhmedHussien', repo_name='ml-pipeline-2', mlflow=True)
 
 
-mlflow.set_tracking_uri("https://dagshub.com/JanaAhmedHussien/ml-pipeline-2.mlflow")
-
 
 with mlflow.start_run() as run:
     run_id = run.info.run_id
