@@ -6,8 +6,14 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
-
 import dagshub
+
+
+dagshub_token = os.environ.get("DAGSHUB_TOKEN")
+if dagshub_token:
+    dagshub.auth.add_token_for_host("dagshub.com", dagshub_token)
+
+# Now initialize DagsHub
 dagshub.init(repo_owner='JanaAhmedHussien', repo_name='ml-pipeline-2', mlflow=True)
 
 
