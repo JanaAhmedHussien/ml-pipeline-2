@@ -9,6 +9,8 @@ jobs:
 
     env:
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
 
     steps:
 
@@ -25,6 +27,11 @@ jobs:
         pip install -r requirements.txt
         pip install dvc
 
+    - name: Configure Git for DVC
+      run: |
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "GitHub Actions"
+
     - name: Pull data with DVC
       run: |
         dvc pull || echo "No remote, using local data"
@@ -38,13 +45,14 @@ jobs:
         name: model_info
         path: model_info.txt
 
-
   deploy:
     needs: validate
     runs-on: ubuntu-latest
 
     env:
       MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
 
     steps:
 
