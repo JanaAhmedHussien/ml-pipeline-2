@@ -6,8 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
 # Set MLflow tracking
-mlflow.set_tracking_uri("")
-
+mlflow.set_tracking_uri("file:./mlruns")
 # Load dataset
 X, y = load_iris(return_X_y=True)
 

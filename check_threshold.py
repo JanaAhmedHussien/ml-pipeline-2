@@ -2,7 +2,7 @@ import mlflow
 import sys
 
 THRESHOLD = 0.85
-
+mlflow.set_tracking_uri("file:./mlruns")
 # Read run ID
 with open("model_info.txt", "r") as f:
     run_id = f.read().strip()
