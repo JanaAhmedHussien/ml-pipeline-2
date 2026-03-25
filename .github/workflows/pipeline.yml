@@ -1,72 +1,72 @@
-name: MLOps Model Pipeline
+name: ML Pipeline
 
 on: [push]
 
 jobs:
+
   validate:
     runs-on: ubuntu-latest
+
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: |
-          pip install mlflow sklearn dvc pandas
-          # Note: If using DVC with S3/GCS/DagsHub, install dvc[s3] etc.
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
 
-      - name: Pull Data (DVC)
-        run: |
-          # If DVC is configured, we pull. 
-          # Use --no-scm if dvc isn't fully initialized in the repo
-          dvc pull || echo "No DVC remote configured, skipping pull for demo"
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install dvc
 
-      - name: Train Model
-        env:
-          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_USERNAME }}
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_PASSWORD }}
-        run: python train.py
+    - name: Pull data with DVC
+      run: |
+        dvc pull || echo "No remote, using local data"
 
-      - name: Persist Run ID
-        uses: actions/upload-artifact@v4
-        with:
-          name: model-metadata
-          path: model_info.txt
+    - name: Train model
+      run: python train.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: model_info
+        path: model_info.txt
+
 
   deploy:
-    runs-on: ubuntu-latest
     needs: validate
+    runs-on: ubuntu-latest
+
+    env:
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: model-metadata
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
 
-      - name: Install MLflow
-        run: pip install mlflow
+    - name: Install dependencies
+      run: pip install mlflow
 
-      - name: Check Accuracy Threshold
-        env:
-          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
-          MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_USERNAME }}
-          MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_PASSWORD }}
-        run: python check_threshold.py
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: model_info
 
-      - name: Mock Build Docker
-        run: |
-          RUN_ID=$(cat model_info.txt)
-          echo "Building Docker image for Run ID: $RUN_ID"
-          docker build --build-arg RUN_ID=$RUN_ID -t my-model:latest .
+    - name: Check accuracy threshold
+      run: python check_threshold.py
+
+    - name: Mock Docker Build
+      run: |
+        echo "Building Docker image for Run ID: $(cat model_info.txt)"
