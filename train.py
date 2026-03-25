@@ -10,10 +10,7 @@ from sklearn.metrics import accuracy_score
 import dagshub
 dagshub.init(repo_owner='JanaAhmedHussien', repo_name='ml-pipeline-2', mlflow=True)
 
-import mlflow
-with mlflow.start_run():
-  mlflow.log_param('parameter name', 'value')
-  mlflow.log_metric('metric name', 1)
+
 mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
 
 
