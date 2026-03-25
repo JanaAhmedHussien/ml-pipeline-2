@@ -28,7 +28,7 @@ jobs:
 
     - name: Pull data with DVC
       run: |
-        dvc pull || echo "No remote, using local data"
+        dvc pull
 
     - name: Train model
       run: python train.py
