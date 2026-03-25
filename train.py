@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import dagshub
 
+dagshub.init(repo_owner='JanaAhmedHussien', repo_name='ml-pipeline-2', mlflow=True)
 
 
 mlflow.set_tracking_uri("https://dagshub.com/JanaAhmedHussien/ml-pipeline-2.mlflow")
